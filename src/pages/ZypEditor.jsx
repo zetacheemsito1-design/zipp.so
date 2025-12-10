@@ -21,6 +21,7 @@ import {
     getMyZypPage, createZypPage, updateZypPage,
     createZypBlock, updateZypBlock, deleteZypBlock, checkUsernameAvailable, reorderZypBlocks
 } from '../lib/supabase';
+import { AvatarUpload } from '../components/ui/ImageUpload';
 
 const THEMES = [
     { id: 'default', name: 'Light', bg: '#ffffff', text: '#000000', accent: '#9bdbc1' },
@@ -467,15 +468,16 @@ export default function ZypEditor() {
                             <Card className="p-6">
                                 <h3 className="font-bold text-gray-900 mb-4">Información</h3>
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Avatar URL</label>
-                                        <input
-                                            type="url"
+                                    <div className="flex items-center gap-4">
+                                        <AvatarUpload
                                             value={avatarUrl}
-                                            onChange={(e) => setAvatarUrl(e.target.value)}
-                                            placeholder="https://..."
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:border-zipp-accent outline-none"
+                                            onChange={setAvatarUrl}
+                                            size="lg"
                                         />
+                                        <div className="flex-1">
+                                            <p className="font-medium text-gray-900 mb-1">Foto de perfil</p>
+                                            <p className="text-xs text-gray-500">Arrastra una imagen o haz click para subir. JPG, PNG hasta 5MB.</p>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
