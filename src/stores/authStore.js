@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
+// Default profile when none exists
+const DEFAULT_PROFILE = {
+    links_count: 0,
+    max_links: 10
+};
+
 export const useAuthStore = create((set, get) => ({
     user: null,
     profile: null,
@@ -12,17 +18,20 @@ export const useAuthStore = create((set, get) => ({
             const { data: { session } } = await supabase.auth.getSession();
 
             if (session?.user) {
-                // Try to get profile, but don't fail if it doesn't exist
-                let profile = null;
+                // Try to get profile, use default if it fails
+                let profile = DEFAULT_PROFILE;
                 try {
-                    const { data } = await supabase
+                    const { data, error } = await supabase
                         .from('profiles')
                         .select('*')
                         .eq('id', session.user.id)
                         .single();
-                    profile = data;
+
+                    if (data && !error) {
+                        profile = data;
+                    }
                 } catch (e) {
-                    console.log('Profile not found or error:', e);
+                    // Silently use default profile
                 }
 
                 set({ user: session.user, profile, loading: false });
@@ -30,7 +39,6 @@ export const useAuthStore = create((set, get) => ({
                 set({ user: null, profile: null, loading: false });
             }
         } catch (error) {
-            console.error('Auth init error:', error);
             set({ user: null, profile: null, loading: false });
         }
     },
@@ -40,16 +48,19 @@ export const useAuthStore = create((set, get) => ({
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 if (session?.user) {
-                    let profile = null;
+                    let profile = DEFAULT_PROFILE;
                     try {
-                        const { data } = await supabase
+                        const { data, error } = await supabase
                             .from('profiles')
                             .select('*')
                             .eq('id', session.user.id)
                             .single();
-                        profile = data;
+
+                        if (data && !error) {
+                            profile = data;
+                        }
                     } catch (e) {
-                        console.log('Profile fetch error:', e);
+                        // Silently use default profile
                     }
 
                     set({ user: session.user, profile, loading: false });
@@ -64,14 +75,15 @@ export const useAuthStore = create((set, get) => ({
     // Check if user can create more links
     canCreateLink: () => {
         const { profile } = get();
-        if (!profile) return true; // Allow if no profile exists
-        return (profile.links_count || 0) < (profile.max_links || 10);
+        const p = profile || DEFAULT_PROFILE;
+        return (p.links_count || 0) < (p.max_links || 10);
     },
 
     // Get remaining links count
     remainingLinks: () => {
         const { profile } = get();
-        if (!profile) return 10;
-        return (profile.max_links || 10) - (profile.links_count || 0);
+        const p = profile || DEFAULT_PROFILE;
+        return (p.max_links || 10) - (p.links_count || 0);
     }
 }));
+
