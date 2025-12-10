@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
-// Default profile when none exists
+// Default profile - no DB needed
 const DEFAULT_PROFILE = {
     links_count: 0,
     max_links: 10
@@ -9,64 +9,32 @@ const DEFAULT_PROFILE = {
 
 export const useAuthStore = create((set, get) => ({
     user: null,
-    profile: null,
+    profile: DEFAULT_PROFILE,
     loading: true,
 
-    // Initialize auth state
+    // Initialize auth state - NO profile fetch, just auth
     initialize: async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-
-            if (session?.user) {
-                // Try to get profile, use default if it fails
-                let profile = DEFAULT_PROFILE;
-                try {
-                    const { data, error } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', session.user.id)
-                        .single();
-
-                    if (data && !error) {
-                        profile = data;
-                    }
-                } catch (e) {
-                    // Silently use default profile
-                }
-
-                set({ user: session.user, profile, loading: false });
-            } else {
-                set({ user: null, profile: null, loading: false });
-            }
+            set({
+                user: session?.user || null,
+                profile: DEFAULT_PROFILE,
+                loading: false
+            });
         } catch (error) {
-            set({ user: null, profile: null, loading: false });
+            set({ user: null, profile: DEFAULT_PROFILE, loading: false });
         }
     },
 
     // Listen to auth changes
     setupAuthListener: () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                if (session?.user) {
-                    let profile = DEFAULT_PROFILE;
-                    try {
-                        const { data, error } = await supabase
-                            .from('profiles')
-                            .select('*')
-                            .eq('id', session.user.id)
-                            .single();
-
-                        if (data && !error) {
-                            profile = data;
-                        }
-                    } catch (e) {
-                        // Silently use default profile
-                    }
-
-                    set({ user: session.user, profile, loading: false });
-                } else {
-                    set({ user: null, profile: null, loading: false });
-                }
+            (event, session) => {
+                set({
+                    user: session?.user || null,
+                    profile: DEFAULT_PROFILE,
+                    loading: false
+                });
             }
         );
         return () => subscription.unsubscribe();
@@ -74,16 +42,11 @@ export const useAuthStore = create((set, get) => ({
 
     // Check if user can create more links
     canCreateLink: () => {
-        const { profile } = get();
-        const p = profile || DEFAULT_PROFILE;
-        return (p.links_count || 0) < (p.max_links || 10);
+        return true; // Always allow for now
     },
 
     // Get remaining links count
     remainingLinks: () => {
-        const { profile } = get();
-        const p = profile || DEFAULT_PROFILE;
-        return (p.max_links || 10) - (p.links_count || 0);
+        return 10; // Default value
     }
 }));
-
