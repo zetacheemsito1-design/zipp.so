@@ -38,6 +38,7 @@ const BG_STYLES = [
     { id: 'solid', name: 'Solid' },
     { id: 'gradient', name: 'Gradient' },
     { id: 'animated', name: 'Animated' },
+    { id: 'image', name: 'Image' },
 ];
 
 const BUTTON_STYLES = [
@@ -50,10 +51,13 @@ const BUTTON_STYLES = [
 ];
 
 const FONTS = [
-    { id: 'Inter', name: 'Inter' },
-    { id: 'Georgia', name: 'Georgia' },
-    { id: 'monospace', name: 'Mono' },
-    { id: 'system-ui', name: 'System' },
+    { id: 'Inter', name: 'Inter', style: 'Modern' },
+    { id: "'Press Start 2P'", name: 'Pixel', style: 'Retro' },
+    { id: 'Silkscreen', name: 'Silk', style: 'Game' },
+    { id: "'Permanent Marker'", name: 'Marker', style: 'Hand' },
+    { id: 'Bangers', name: 'Bangers', style: 'Comic' },
+    { id: 'Georgia', name: 'Georgia', style: 'Serif' },
+    { id: 'monospace', name: 'Mono', style: 'Code' },
 ];
 
 const BLOCK_TYPES = [
@@ -151,6 +155,7 @@ export default function ZypEditor() {
     const [socialLinks, setSocialLinks] = useState([]);
     const [customCss, setCustomCss] = useState('');
     const [customHtml, setCustomHtml] = useState('');
+    const [bgImage, setBgImage] = useState('');
 
     // Block modal
     const [blockModal, setBlockModal] = useState(false);
@@ -195,6 +200,7 @@ export default function ZypEditor() {
                 setSocialLinks(data.social_links || []);
                 setCustomCss(data.custom_css || '');
                 setCustomHtml(data.custom_html || '');
+                setBgImage(data.bg_image || '');
                 setBlocks(data.zyp_blocks?.sort((a, b) => a.position - b.position) || []);
             } else {
                 setShowSetup(true);
@@ -247,6 +253,7 @@ export default function ZypEditor() {
                 avatar_url: avatarUrl,
                 theme,
                 bg_type: bgStyle,
+                bg_image: bgImage,
                 accent_color: accentColor,
                 button_style: buttonStyle,
                 font_family: fontFamily,
@@ -613,7 +620,7 @@ export default function ZypEditor() {
 
                             <Card className="p-6">
                                 <h3 className="font-bold text-gray-900 mb-4">Fondo</h3>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-4">
                                     {BG_STYLES.map(bg => (
                                         <button
                                             key={bg.id}
@@ -625,6 +632,19 @@ export default function ZypEditor() {
                                         </button>
                                     ))}
                                 </div>
+                                {bgStyle === 'image' && (
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">URL de imagen de fondo</label>
+                                        <input
+                                            type="url"
+                                            value={bgImage}
+                                            onChange={(e) => setBgImage(e.target.value)}
+                                            placeholder="https://..."
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:border-zipp-accent outline-none"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">Sube tu imagen a imgur.com o similar</p>
+                                    </div>
+                                )}
                             </Card>
 
                             <Card className="p-6">
@@ -645,16 +665,17 @@ export default function ZypEditor() {
 
                             <Card className="p-6">
                                 <h3 className="font-bold text-gray-900 mb-4">Fuente</h3>
-                                <div className="grid grid-cols-4 gap-2">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                     {FONTS.map(f => (
                                         <button
                                             key={f.id}
                                             onClick={() => setFontFamily(f.id)}
-                                            className={`p-3 rounded-xl border-2 text-sm ${fontFamily === f.id ? 'border-zipp-accent' : 'border-gray-100'
+                                            className={`p-3 rounded-xl border-2 text-center ${fontFamily === f.id ? 'border-zipp-accent bg-zipp-accent/5' : 'border-gray-100'
                                                 }`}
                                             style={{ fontFamily: f.id }}
                                         >
-                                            {f.name}
+                                            <span className="text-sm font-medium block">{f.name}</span>
+                                            <span className="text-[10px] text-gray-400">{f.style}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -754,15 +775,18 @@ export default function ZypEditor() {
                             <div
                                 className={`zyp-container overflow-hidden ${previewMode === 'mobile' ? 'rounded-[1.5rem]' : 'rounded-2xl shadow-xl'}`}
                                 style={{
-                                    background: bgStyle === 'gradient'
-                                        ? `linear-gradient(135deg, ${currentTheme.bg}, ${accentColor}40)`
-                                        : bgStyle === 'animated'
-                                            ? `linear-gradient(-45deg, ${accentColor}, ${currentTheme.bg}, ${accentColor}80, ${currentTheme.bg})`
-                                            : currentTheme.bg,
+                                    background: bgStyle === 'image' && bgImage
+                                        ? `url(${bgImage}) center/cover no-repeat`
+                                        : bgStyle === 'gradient'
+                                            ? `linear-gradient(135deg, ${currentTheme.bg}, ${accentColor}40)`
+                                            : bgStyle === 'animated'
+                                                ? `linear-gradient(-45deg, ${accentColor}, ${currentTheme.bg}, ${accentColor}80, ${currentTheme.bg})`
+                                                : currentTheme.bg,
+                                    backgroundColor: currentTheme.bg,
                                     color: currentTheme.text,
                                     fontFamily: fontFamily,
                                     minHeight: previewMode === 'mobile' ? '500px' : '600px',
-                                    backgroundSize: bgStyle === 'animated' ? '400% 400%' : 'auto',
+                                    backgroundSize: bgStyle === 'animated' ? '400% 400%' : bgStyle === 'image' ? 'cover' : 'auto',
                                     animation: bgStyle === 'animated' ? 'gradient-animation 15s ease infinite' : 'none',
                                 }}
                             >

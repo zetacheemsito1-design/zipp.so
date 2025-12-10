@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Link2, ExternalLink, ShieldCheck, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Link2, ExternalLink, ShieldCheck, Loader2, CheckCircle2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { getPublicLink, recordClick, recordConversion } from '../lib/supabase';
+import { verifyAccess, createInteractionChallenge, isLikelyBot } from '../lib/antibypass';
 
 export default function LinkView() {
     const { id } = useParams();
@@ -13,17 +14,39 @@ export default function LinkView() {
     const [clickId, setClickId] = useState(null);
     const [actionCompleted, setActionCompleted] = useState(false);
     const [unlocked, setUnlocked] = useState(false);
+    const [blocked, setBlocked] = useState(false);
+    const [verificationToken, setVerificationToken] = useState(null);
+    const [interactionVerified, setInteractionVerified] = useState(false);
 
     useEffect(() => {
         loadLink();
     }, [id]);
 
+    // Start interaction verification in background
+    useEffect(() => {
+        createInteractionChallenge().then(() => {
+            setInteractionVerified(true);
+        });
+    }, []);
+
     const loadLink = async () => {
         try {
+            // Anti-bypass verification
+            const verification = await verifyAccess(id);
+
+            if (!verification.allowed) {
+                console.warn('Access blocked - Risk score:', verification.riskScore);
+                setBlocked(true);
+                setLoading(false);
+                return;
+            }
+
+            setVerificationToken(verification.token);
+
             const data = await getPublicLink(id);
             setLink(data);
 
-            // Record click
+            // Record click with fingerprint
             const click = await recordClick(id);
             setClickId(click.id);
         } catch (err) {
@@ -35,6 +58,12 @@ export default function LinkView() {
     };
 
     const handleCompleteAction = () => {
+        // Additional bot check before opening
+        if (isLikelyBot()) {
+            setBlocked(true);
+            return;
+        }
+
         // Open target URL in new tab
         if (link.target_url) {
             window.open(link.target_url, '_blank');
@@ -47,8 +76,20 @@ export default function LinkView() {
     };
 
     const handleUnlock = async () => {
+        // Require interaction verification
+        if (!interactionVerified) {
+            console.warn('Interaction not verified yet');
+            return;
+        }
+
+        // Final bot check
+        if (isLikelyBot()) {
+            setBlocked(true);
+            return;
+        }
+
         try {
-            // Record conversion
+            // Record conversion with token
             if (clickId) {
                 await recordConversion(clickId);
             }
@@ -64,6 +105,26 @@ export default function LinkView() {
             window.location.href = link.destination_url;
         }
     };
+
+    // Blocked screen for bots/bypass attempts
+    if (blocked) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
+                <div className="text-center max-w-md">
+                    <div className="w-20 h-20 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <ShieldAlert size={40} />
+                    </div>
+                    <h1 className="text-2xl font-bold text-white mb-2">Acceso Bloqueado</h1>
+                    <p className="text-gray-400 mb-8">
+                        Se detectó actividad sospechosa. Si eres humano, intenta refrescar la página.
+                    </p>
+                    <Button variant="outline" onClick={() => window.location.reload()}>
+                        Reintentar
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
@@ -165,8 +226,8 @@ export default function LinkView() {
 
                             {/* Task */}
                             <div className={`p-5 rounded-3xl border-2 transition-all duration-300 ${actionCompleted
-                                    ? 'bg-green-50 border-green-200'
-                                    : 'bg-gray-50 border-gray-100 hover:border-zipp-accent/50'
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-gray-50 border-gray-100 hover:border-zipp-accent/50'
                                 }`}>
                                 <div className="flex items-center gap-4">
                                     <img
@@ -208,8 +269,8 @@ export default function LinkView() {
                                     onClick={handleUnlock}
                                     disabled={!actionCompleted}
                                     className={`w-full py-5 text-lg font-extrabold rounded-2xl transition-all ${actionCompleted
-                                            ? 'animate-pulse'
-                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed hover:bg-gray-200'
+                                        ? 'animate-pulse'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed hover:bg-gray-200'
                                         }`}
                                 >
                                     <ShieldCheck size={20} />
