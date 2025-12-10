@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import {
     Menu, X, CheckCircle2, Heart, Link2,
     Zap, BarChart3, ShieldCheck, ArrowRight,
-    Twitter, MessageCircle
+    Twitter, MessageCircle, User, LayoutDashboard
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { useAuthStore } from '../stores/authStore';
 
 const PLATFORMS = [
     { id: 'roblox', name: 'Roblox', domain: 'roblox.com' },
@@ -34,6 +35,7 @@ const Logo = () => (
 
 export default function Landing() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { user } = useAuthStore();
 
     return (
         <div className="min-h-screen bg-zipp-white text-zipp-black font-sans selection:bg-zipp-accent selection:text-black scroll-smooth">
@@ -47,12 +49,25 @@ export default function Landing() {
                         <a href="#pricing" className="hover:text-zipp-black transition-colors">Pricing</a>
                     </div>
                     <div className="hidden md:flex items-center gap-3">
-                        <Link to="/login">
-                            <Button variant="ghost" className="px-5 py-2.5 text-sm">Login</Button>
-                        </Link>
-                        <Link to="/signup">
-                            <Button variant="accent" className="px-5 py-2.5 text-sm">Sign Up Free</Button>
-                        </Link>
+                        {user ? (
+                            // Logged in - show dashboard button and avatar
+                            <Link to="/dashboard">
+                                <Button variant="accent" className="px-5 py-2.5 text-sm gap-2">
+                                    <LayoutDashboard size={16} />
+                                    Dashboard
+                                </Button>
+                            </Link>
+                        ) : (
+                            // Not logged in - show login/signup
+                            <>
+                                <Link to="/login">
+                                    <Button variant="ghost" className="px-5 py-2.5 text-sm">Login</Button>
+                                </Link>
+                                <Link to="/signup">
+                                    <Button variant="accent" className="px-5 py-2.5 text-sm">Sign Up Free</Button>
+                                </Link>
+                            </>
+                        )}
                     </div>
                     <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2"><Menu /></button>
                 </div>
@@ -64,9 +79,17 @@ export default function Landing() {
                     >
                         <a href="#how" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold p-4 hover:bg-gray-50 rounded-2xl">How it Works</a>
                         <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold p-4 hover:bg-gray-50 rounded-2xl">Pricing</a>
-                        <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
-                            <Button variant="primary" className="w-full mt-2">Sign Up Free</Button>
-                        </Link>
+                        {user ? (
+                            <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                                <Button variant="accent" className="w-full mt-2 gap-2">
+                                    <LayoutDashboard size={18} /> Go to Dashboard
+                                </Button>
+                            </Link>
+                        ) : (
+                            <Link to="/signup" onClick={() => setIsMenuOpen(false)}>
+                                <Button variant="primary" className="w-full mt-2">Sign Up Free</Button>
+                            </Link>
+                        )}
                     </motion.div>
                 )}
             </nav>
