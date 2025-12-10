@@ -30,3 +30,12 @@ customHeaders:
     headers:
       - key: Cache-Control
         value: 'no-cache, no-store, must-revalidate'
+
+# SPA Rewrites - redirect all routes to index.html
+customRules:
+  - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>'
+    target: '/index.html'
+    status: '200'
+  - source: '/<*>'
+    target: '/index.html'
+    status: '404-200'
